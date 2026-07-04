@@ -1,0 +1,1096 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DGML — the domain-native document format</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Fira+Code:wght@500;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg:          #f5fdf8;
+      --bg-card:     #ffffff;
+      --border:      rgba(0,60,30,0.09);
+      --accent:      #16a34a;
+      --accent-dim:  rgba(22,163,74,0.10);
+      --accent-glow: rgba(22,163,74,0.25);
+      --blue:        #2563eb;
+      --blue-dim:    rgba(22,163,74,0.08);
+      --green:       #16a34a;
+      --green-dim:   rgba(22,163,74,0.08);
+      --purple:      #7c3aed;
+      --purple-dim:  rgba(124,58,237,0.10);
+      --text:        #0a1f14;
+      --text-muted:  #2d5a3d;
+      --text-dim:    #94b8a4;
+      --mono:        'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 16px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      height: 60px;
+      background: rgba(245,253,248,0.92);
+      box-shadow: 0 1px 0 var(--border);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-inner {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 0 2rem;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .site-logo {
+      font-family: 'Fira Code', 'Cascadia Code', monospace;
+      font-weight: 700;
+      font-size: 1.1rem;
+      letter-spacing: 0.05em;
+      color: #3ecf6e;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 2rem;
+      list-style: none;
+      align-items: center;
+    }
+    .nav-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.875rem;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--text); }
+
+    .nav-cta {
+      background: var(--accent) !important;
+      color: #ffffff !important;
+      padding: 0.4rem 1rem;
+      border-radius: 6px;
+      font-weight: 600 !important;
+      transition: opacity 0.2s !important;
+    }
+    .nav-cta:hover { opacity: 0.85 !important; }
+
+    /* ── HERO ── */
+    .hero {
+      position: relative;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 6rem 2rem 5rem;
+      overflow: hidden;
+    }
+
+    /* grid — removed for light theme */
+    .hero-grid { display: none; }
+
+    /* glow orbs */
+    .hero-orb {
+      position: absolute;
+      border-radius: 50%;
+      pointer-events: none;
+      filter: blur(90px);
+    }
+    .hero-orb-1 {
+      width: 750px; height: 750px;
+      top: -260px; left: 50%;
+      transform: translateX(-50%);
+      background: radial-gradient(circle, rgba(22,163,74,0.15) 0%, transparent 65%);
+      animation: orb1 9s ease-in-out infinite;
+    }
+    .hero-orb-2 {
+      width: 460px; height: 460px;
+      bottom: -80px; right: -80px;
+      background: radial-gradient(circle, rgba(124,58,237,0.08) 0%, transparent 65%);
+      animation: orb2 12s ease-in-out infinite;
+    }
+    .hero-orb-3 {
+      width: 300px; height: 300px;
+      bottom: 60px; left: -60px;
+      background: radial-gradient(circle, rgba(34,197,94,0.08) 0%, transparent 65%);
+      animation: orb2 15s ease-in-out infinite reverse;
+    }
+
+    @keyframes orb1 {
+      0%,100% { opacity:.7; transform: translateX(-50%) scale(1); }
+      50%      { opacity:1;  transform: translateX(-50%) scale(1.07); }
+    }
+    @keyframes orb2 {
+      0%,100% { opacity:.5; transform: scale(1); }
+      50%      { opacity:.9; transform: scale(1.1); }
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--accent-dim);
+      border: 1px solid rgba(62,207,110,0.3);
+      border-radius: 100px;
+      padding: 0.3rem 0.9rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--accent);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 2.2rem;
+      position: relative;
+      z-index: 1;
+    }
+    .hero-badge::before {
+      content: '';
+      width: 6px; height: 6px;
+      background: var(--accent);
+      border-radius: 50%;
+      animation: blink 2s ease-in-out infinite;
+    }
+    @keyframes blink {
+      0%,100% { opacity: 1; }
+      50%      { opacity: 0.25; }
+    }
+
+    .hero-title {
+      font-size: clamp(2.6rem, 7vw, 5.2rem);
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      line-height: 1.05;
+      max-width: 900px;
+      position: relative;
+      z-index: 1;
+      margin-bottom: 1rem;
+      background: linear-gradient(160deg, #0a1f14 40%, #16a34a 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-sub {
+      font-size: clamp(1.05rem, 2.4vw, 1.45rem);
+      font-weight: 400;
+      color: var(--text-muted);
+      letter-spacing: -0.01em;
+      margin-bottom: 2.6rem;
+      position: relative;
+      z-index: 1;
+      max-width: 620px;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      justify-content: center;
+      position: relative;
+      z-index: 1;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 0.82rem 1.9rem;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+      transition: transform 0.15s, box-shadow 0.2s;
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 36px var(--blue-glow);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px solid rgba(0,60,30,0.22);
+      padding: 0.82rem 1.9rem;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 500;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .btn-ghost:hover {
+      border-color: var(--accent);
+      color: var(--text);
+    }
+
+    .hero-scroll {
+      position: absolute;
+      bottom: 2.2rem;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1;
+    }
+    .scroll-arrow {
+      width: 18px; height: 18px;
+      border-right: 1.5px solid var(--text-dim);
+      border-bottom: 1.5px solid var(--text-dim);
+      transform: rotate(45deg);
+      animation: bounce 2s ease-in-out infinite;
+    }
+    @keyframes bounce {
+      0%,100% { transform: rotate(45deg) translate(0,0); }
+      50%      { transform: rotate(45deg) translate(3px,3px); }
+    }
+
+    /* ── SHARED LAYOUT ── */
+    section { padding: 7rem 2rem; position: relative; }
+
+    .container { max-width: 1080px; margin: 0 auto; }
+
+    .section-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 0.9rem;
+    }
+
+    .section-title {
+      font-size: clamp(1.75rem, 3.5vw, 2.75rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.18;
+      margin-bottom: 1.1rem;
+    }
+
+    .section-body {
+      font-size: 1.02rem;
+      color: var(--text-muted);
+      max-width: 580px;
+      line-height: 1.78;
+    }
+
+    /* ── WHY ── */
+    #why { border-top: 1px solid var(--border); }
+
+    .why-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5rem;
+      align-items: center;
+    }
+
+    .why-points {
+      display: flex;
+      flex-direction: column;
+      gap: 1.8rem;
+      margin-top: 2.8rem;
+    }
+
+    .why-point {
+      display: flex;
+      gap: 1.1rem;
+      align-items: flex-start;
+    }
+
+    .why-icon {
+      width: 38px; height: 38px;
+      background: var(--accent-dim);
+      border: 1px solid rgba(62,207,110,0.22);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 0.95rem;
+    }
+
+    .why-point-text h3 {
+      font-size: 0.92rem;
+      font-weight: 600;
+      margin-bottom: 0.3rem;
+    }
+    .why-point-text p {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      line-height: 1.68;
+    }
+
+    /* doc stack visual */
+    .why-visual {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .doc-stack {
+      position: relative;
+      width: 260px;
+      height: 320px;
+    }
+
+    .doc-card {
+      position: absolute;
+      width: 235px;
+      background: #1a2e22;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 1.15rem 1.25rem;
+      font-family: var(--mono);
+      font-size: 0.68rem;
+      color: #5d8c70;
+      line-height: 1.75;
+    }
+    .doc-card:nth-child(1) { top:0; left:30px; transform:rotate(-3.5deg); z-index:1; }
+    .doc-card:nth-child(2) { top:28px; left:15px; transform:rotate(-1.2deg); z-index:2; }
+    .doc-card:nth-child(3) {
+      top:56px; left:0;
+      transform:rotate(0.8deg);
+      z-index:3;
+      border-color: rgba(22,163,74,0.4);
+      box-shadow: 0 0 36px rgba(22,163,74,0.15);
+    }
+    .t-b { color: var(--accent); }
+    .t-g { color: var(--green); }
+    .t-a { color: #a78bfa; }
+    .t-v { color: #f59e0b; }
+
+    /* ── LAYERS ── */
+    #layers {
+      border-top: 1px solid var(--border);
+      background: linear-gradient(180deg, var(--bg) 0%, #e8f7ef 100%);
+    }
+
+    .layers-header {
+      text-align: center;
+      margin-bottom: 3.5rem;
+    }
+    .layers-header .section-body { margin: 0 auto; }
+
+    .layers-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.4rem;
+    }
+
+    .layer-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2rem;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .layer-card:hover { transform: translateY(-4px); }
+
+    .layer-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+    }
+    .layer-card.lc-blue::before   { background: var(--accent); }
+    .layer-card.lc-green::before  { background: var(--green); }
+    .layer-card.lc-purple::before { background: var(--purple); }
+    .layer-card.lc-amber::before  { background: #f59e0b; }
+
+    .layer-card.lc-blue:hover   { box-shadow: 0 14px 44px rgba(62,207,110,0.13); }
+    .layer-card.lc-green:hover  { box-shadow: 0 14px 44px rgba(34,197,94,0.11); }
+    .layer-card.lc-purple:hover { box-shadow: 0 14px 44px rgba(168,85,247,0.11); }
+    .layer-card.lc-amber:hover  { box-shadow: 0 14px 44px rgba(245,158,11,0.13); }
+
+    .layer-num {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      padding: 0.22rem 0.6rem;
+      border-radius: 4px;
+      display: inline-block;
+      margin-bottom: 1.1rem;
+    }
+    .lc-blue   .layer-num { background: var(--accent-dim);   color: var(--accent);   border: 1px solid rgba(62,207,110,0.2); }
+    .lc-green  .layer-num { background: var(--green-dim);  color: var(--green);  border: 1px solid rgba(34,197,94,0.2); }
+    .lc-purple .layer-num { background: var(--purple-dim); color: var(--purple); border: 1px solid rgba(168,85,247,0.2); }
+    .lc-amber  .layer-num { background: rgba(245,158,11,0.12); color: #f59e0b; border: 1px solid rgba(245,158,11,0.2); }
+
+    .layer-card h3 {
+      font-size: 1.22rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.75rem;
+    }
+    .lc-blue   h3 { color: var(--accent); }
+    .lc-green  h3 { color: var(--green); }
+    .lc-purple h3 { color: var(--purple); }
+    .lc-amber  h3 { color: #f59e0b; }
+
+    .layer-card p {
+      font-size: 0.862rem;
+      color: var(--text-muted);
+      line-height: 1.72;
+      margin-bottom: 1.25rem;
+    }
+
+    .layer-stat {
+      font-size: 0.76rem;
+      font-weight: 600;
+      padding: 0.38rem 0.75rem;
+      border-radius: 6px;
+      display: inline-block;
+    }
+    .lc-blue   .layer-stat { background: var(--accent-dim);   color: var(--accent);   border: 1px solid rgba(62,207,110,0.2); }
+    .lc-green  .layer-stat { background: var(--green-dim);  color: var(--green);  border: 1px solid rgba(34,197,94,0.2); }
+    .lc-purple .layer-stat { background: var(--purple-dim); color: var(--purple); border: 1px solid rgba(168,85,247,0.2); }
+    .lc-amber  .layer-stat { background: rgba(245,158,11,0.12); color: #f59e0b; border: 1px solid rgba(245,158,11,0.2); }
+
+    /* ── HOW IT WORKS ── */
+    #how { border-top: 1px solid var(--border); }
+
+    .how-grid {
+      display: grid;
+      grid-template-columns: 1fr 1.25fr;
+      gap: 5rem;
+      align-items: start;
+    }
+
+    .how-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 2.2rem;
+      margin-top: 2.8rem;
+    }
+
+    .step { display: flex; gap: 1.1rem; }
+
+    .step-num {
+      width: 30px; height: 30px;
+      background: var(--accent-dim);
+      border: 1px solid rgba(62,207,110,0.28);
+      border-radius: 7px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--accent);
+      flex-shrink: 0;
+      margin-top: 3px;
+    }
+
+    .step-text h3 {
+      font-size: 0.92rem;
+      font-weight: 600;
+      margin-bottom: 0.3rem;
+    }
+    .step-text p {
+      font-size: 0.84rem;
+      color: var(--text-muted);
+      line-height: 1.67;
+    }
+
+    /* code block */
+    .code-window {
+      background: #06060f;
+      border: 1px solid rgba(255,255,255,0.09);
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 28px 70px rgba(0,0,0,0.55);
+    }
+
+    .code-titlebar {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.85rem 1.2rem;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      background: rgba(255,255,255,0.025);
+    }
+
+    .dot {
+      width: 11px; height: 11px;
+      border-radius: 50%;
+    }
+    .dot-r { background: #ff5f56; }
+    .dot-y { background: #ffbd2e; }
+    .dot-g { background: #27c93f; }
+
+    .code-filename {
+      margin-left: auto;
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      font-family: var(--mono);
+    }
+
+    pre {
+      padding: 1.5rem 1.7rem;
+      overflow-x: auto;
+      font-family: var(--mono);
+      font-size: 0.77rem;
+      line-height: 1.88;
+      color: #c9d1d9;
+      tab-size: 2;
+    }
+
+    .c-tag     { color: #79c0ff; }
+    .c-attr    { color: #d2a8ff; }
+    .c-val     { color: #a5d6ff; }
+    .c-cmt     { color: #3d4451; font-style: italic; }
+    .c-hash    { color: #e3b341; }
+    .c-text    { color: #e6edf3; }
+    .c-green   { color: var(--green); }
+    .c-num     { color: #f47067; }
+
+    /* ── CTA ── */
+    #cta {
+      border-top: 1px solid var(--border);
+      background: linear-gradient(180deg, #e8f7ef 0%, var(--bg) 100%);
+    }
+
+    .cta-inner {
+      text-align: center;
+      max-width: 680px;
+      margin: 0 auto;
+    }
+
+    .cta-inner .section-title { margin-bottom: 1rem; }
+    .cta-inner .section-body  { margin: 0 auto; }
+
+    /* ── USE CASES ── */
+    #usecases { border-top: 1px solid var(--border); }
+
+    .usecases-header {
+      text-align: center;
+      margin-bottom: 3.5rem;
+    }
+    .usecases-header .section-body { margin: 0 auto; }
+
+    .usecases-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1.4rem;
+    }
+
+    .usecase-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2rem;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .usecase-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 14px 44px rgba(62,207,110,0.10);
+    }
+
+    .usecase-icon {
+      font-size: 1.6rem;
+      margin-bottom: 1rem;
+      display: block;
+    }
+
+    .usecase-card h3 {
+      font-size: 1.08rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.7rem;
+      color: var(--text);
+    }
+
+    .usecase-card p {
+      font-size: 0.862rem;
+      color: var(--text-muted);
+      line-height: 1.72;
+    }
+
+    .usecase-divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 1rem 0;
+    }
+
+    /* ── OPEN INITIATIVE ── */
+    #open-initiative {
+      border-top: 1px solid var(--border);
+      background: linear-gradient(180deg, var(--bg) 0%, #e8f7ef 100%);
+    }
+
+    .initiative-inner {
+      max-width: 720px;
+      margin: 0 auto;
+      text-align: center;
+    }
+
+    .initiative-inner .section-body {
+      margin: 0 auto 2.5rem;
+    }
+
+    .initiative-actions {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 0.5rem;
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      border-top: 1px solid var(--border);
+    }
+
+    .footer-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 1.8rem 2rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .footer-brand {
+      font-size: 0.9rem;
+      font-weight: 800;
+      color: var(--text-muted);
+    }
+    .footer-brand span { color: var(--accent); }
+
+    .footer-links {
+      display: flex;
+      gap: 1.4rem;
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .footer-links a {
+      color: inherit;
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .footer-links a:hover { color: var(--text-muted); }
+    .footer-sep { opacity: 0.4; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 768px) {
+      nav { padding: 0 1.2rem; }
+      .nav-links { display: none; }
+      section { padding: 4.5rem 1.4rem; }
+      .why-grid  { grid-template-columns: 1fr; gap: 2.5rem; }
+      .why-visual { display: none; }
+      .layers-grid { grid-template-columns: 1fr !important; }
+      .how-grid { grid-template-columns: 1fr; gap: 3rem; }
+      .usecases-grid { grid-template-columns: 1fr; }
+      .footer-inner { flex-direction: column; text-align: center; }
+      .footer-links { justify-content: center; }
+    }
+
+    @media (max-width: 480px) {
+      .hero-title { font-size: 2.1rem; }
+      .hero-actions { flex-direction: column; }
+      .btn-primary, .btn-ghost { text-align: center; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-inner">
+    <div class="site-logo">&lt;/&gt;&thinsp;DGML</div>
+    <ul class="nav-links">
+      <li><a href="#why">Why DGML</a></li>
+      <li><a href="#layers">Layers</a></li>
+      <li><a href="#how">How It Works</a></li>
+      <li><a href="#usecases">Use Cases</a></li>
+      <li><a href="https://github.com/docugami/dgml" class="nav-cta">GitHub →</a></li>
+    </ul>
+  </div>
+</nav>
+
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-grid"></div>
+  <div class="hero-orb hero-orb-1"></div>
+  <div class="hero-orb hero-orb-2"></div>
+  <div class="hero-orb hero-orb-3"></div>
+
+  <div class="hero-badge">Open Standard &middot; Apache 2.0 Licensed</div>
+
+  <p class="section-label" style="font-size:0.9rem;margin-bottom:0.6rem;position:relative;z-index:1;">DGML</p>
+  <h1 class="hero-title">the domain-native<br>document format.</h1>
+
+  <p class="hero-sub">Your AI shouldn&rsquo;t have to guess what it&rsquo;s reading.</p>
+
+  <div class="hero-actions">
+    <a href="https://github.com/docugami/dgml" class="btn-primary">Read the spec &rarr;</a>
+    <a href="https://github.com/docugami/dgml" class="btn-ghost">Reference Implementation</a>
+    <a href="https://github.com/docugami/dgml/discussions" class="btn-primary">Participate</a>
+    <a href="examples/dgml-app-sample.html" class="btn-ghost">Try the App Sample</a>
+  </div>
+
+  <div style="display:flex; align-items:center; gap:1.5rem; justify-content:center; margin-top:2.5rem;">
+    <span style="font-size:0.8rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.08em;">Founded by</span>
+    <a href="https://www.docugami.com" target="_blank" rel="noopener" style="display:flex; align-items:center;">
+      <img src="https://www.docugami.com/hs-fs/hubfs/dglogo%20green%20horiz%20transp.png" alt="Docugami" style="height:28px;">
+    </a>
+    <a href="https://www.inveniam.io" target="_blank" rel="noopener" style="font-size:1.1rem; font-weight:700; color:var(--text); text-decoration:none; letter-spacing:-0.02em;">Inveniam</a>
+  </div>
+
+  <div class="hero-scroll">
+    <div class="scroll-arrow"></div>
+  </div>
+</section>
+
+<!-- WHY DGML -->
+<section id="why">
+  <div class="container">
+    <div class="layers-header">
+      <p class="section-label">The Problem</p>
+      <h2 class="section-title">Markdown was built for humans.<br>Your AI deserves better.</h2>
+      <p class="section-body">
+        Every token you send to an LLM costs money and burns context. Markdown forces your model to re-discover structure on every call — layout noise, no typed values, no relationships.
+        Structural formats name the shape — <code style="color:var(--accent);font-size:0.84em">&lt;section&gt;</code>, <code style="color:var(--accent);font-size:0.84em">&lt;table&gt;</code> — but not the substance.
+        Raw documents burn the entire file into every call with no leverage. And none of them can prove a value hasn&rsquo;t changed since it was signed.
+      </p>
+    </div>
+
+    <div class="layers-grid">
+      <div class="layer-card lc-blue">
+        <div class="why-icon" style="margin-bottom:1rem;">⚡</div>
+        <h3>Same tag. Same meaning. Every document.</h3>
+        <p>Cross-document tag consistency is the headline feature. An agent that can query one contract's <code style="font-size:0.82em">&lt;liability-cap&gt;</code> can query the same element across a thousand contracts — identical logic, no per-document prompt engineering.</p>
+      </div>
+      <div class="layer-card lc-blue">
+        <div class="why-icon" style="margin-bottom:1rem;">📍</div>
+        <h3>Every value traced to the pixel</h3>
+        <p>Each element carries <code style="font-size:0.82em">dg:origin</code> — pixel-precise coordinates back to the source page. An answer becomes a highlighted region on the real document. Not a floating assertion.</p>
+      </div>
+      <div class="layer-card lc-blue">
+        <div class="why-icon" style="margin-bottom:1rem;">🔗</div>
+        <h3>Structured as a tree. Connected as a graph.</h3>
+        <p>The XML hierarchy captures containment. Named links across documents capture relationships — an amendment points to what it modifies, a receipt points to the obligation it fulfills. The result is a JSON-LD-compatible graph, derived directly from the XML.</p>
+      </div>
+      <div class="layer-card lc-blue">
+        <div class="why-icon" style="margin-bottom:1rem;">🔒</div>
+        <h3>Proof of Origin at the data-element level</h3>
+        <p>Traditional blockchain proofs cover a whole document. DGML lets you anchor individual data elements on an external chain — prove a specific data element is unchanged without producing the full document.</p>
+      </div>
+      <div class="layer-card lc-blue">
+        <div class="why-icon" style="margin-bottom:1rem;">📦</div>
+        <h3>The entire document semantic is preserved — not a selection</h3>
+        <p>Traditional extraction makes an irreversible upfront decision: pick the fields, discard the rest. DGML preserves the full semantic structure. A document processed once remains fully queryable as new use cases emerge — without going back to the source.</p>
+      </div>
+      <div class="layer-card lc-blue">
+        <div class="why-icon" style="margin-bottom:1rem;">🌐</div>
+        <h3>Decentralized namespaces, composable fragments</h3>
+        <p>Each organization defines its own vocabulary. Fragments from different organizations compose into a single document — no global registry, end-to-end provenance across the assembly.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- THREE LAYERS -->
+<section id="layers">
+  <div class="container">
+    <div class="layers-header">
+      <p class="section-label">Architecture</p>
+      <h2 class="section-title">Four layers. One coherent format.</h2>
+      <p class="section-body">
+        DGML is composed of complementary layers that work independently. Strip what you don&rsquo;t need, keep what you do. One self-contained file serves an LLM call, a browser view, and a compliance audit trail. For situations where a hallucinated or unverifiable answer is not an acceptable outcome.
+      </p>
+    </div>
+
+    <div class="layers-grid" style="grid-template-columns: repeat(4, 1fr);">
+      <div class="layer-card lc-blue">
+        <div class="layer-num">Layer 1</div>
+        <h3>Semantic</h3>
+        <p>
+          Each semantic tag collapses many surface tokens into a single named concept. Your model sees <code style="font-size:0.82em">&lt;LiabilityCap&gt;$500,000&lt;/LiabilityCap&gt;</code> instead of three paragraphs of surrounding prose. Strip <code style="font-size:0.82em">dg:origin</code> before the API call for further compression. Or send a single subtree in isolation — precision targeting instead of burning the whole document.
+        </p>
+        <div class="layer-stat">Fewer tokens. More signal. Less cost.</div>
+      </div>
+
+      <div class="layer-card lc-green">
+        <div class="layer-num">Layer 2</div>
+        <h3>Spatial</h3>
+        <p>
+          Every element carries a <code style="font-size:0.82em">dg:origin</code> attribute encoding its pixel-precise bounding box in the source document. Highlight citations, verify extractions, build redaction tooling &mdash; all grounded to the real page.
+        </p>
+        <div class="layer-stat">Pixel-precise page coordinates</div>
+      </div>
+
+      <div class="layer-card lc-purple">
+        <div class="layer-num">Layer 3</div>
+        <h3>Attestation</h3>
+        <p>
+          Anchor individual data elements on any external blockchain — Proof of Origin at the data-element level, not just the file level. The DGMLX package also carries a cryptographic hash of the full document and page images, with packages chaining to their predecessors for tamper-evident provenance across document versions.
+        </p>
+        <div class="layer-stat">Element-level Proof of Origin</div>
+      </div>
+
+      <div class="layer-card lc-amber">
+        <div class="layer-num">Layer 4</div>
+        <h3>Readable</h3>
+        <p>
+          A DGML file is human-readable in any browser — no special viewer, no extra tooling. Elements can carry <code style="font-size:0.82em">dg:structure</code> to map to HTML tags and <code style="font-size:0.82em">dg:style</code> to express observed simple formatting as CSS. A few lines of transform is all it takes. The same file your AI reasons over is one a person can open, read, and understand.
+        </p>
+        <div class="layer-stat">Human-readable, zero extra tooling</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how">
+  <div class="container">
+    <div class="how-grid">
+      <div>
+        <p class="section-label">The Format</p>
+        <h2 class="section-title">Built for reasoning.<br>Not for rendering.</h2>
+        <p class="section-body">Tags that say what things are. Not where they were.</p>
+
+        <div class="how-steps">
+          <div class="step">
+            <div class="step-num">01</div>
+            <div class="step-text">
+              <h3>Docsets: one vocabulary, an entire corpus</h3>
+              <p>A docset is a named collection of same-kind documents — all your invoices, all your contracts — governed by a shared domain vocabulary. <code style="color:var(--accent);font-size:0.82em">LiabilityCap</code>, <code style="color:var(--accent);font-size:0.82em">TotalDue</code>, <code style="color:var(--accent);font-size:0.82em">PaymentTerm</code> mean the same thing in every file in the docset. Query one, query all.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num">02</div>
+            <div class="step-text">
+              <h3>Every value typed, every value traced</h3>
+              <p>Amounts are decimals. Dates are dates. And every element knows exactly where it came from on the original page — down to the pixel.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num">03</div>
+            <div class="step-text">
+              <h3>Send your AI what it needs — nothing more</h3>
+              <p>Strip <code style="color:var(--accent);font-size:0.84em">dg:origin</code> before the API call to remove spatial coordinates. Send the whole document compactly, or a single subtree to focus attention precisely. Domain-specific XML your model reasons over — not re-parses, not guesses at.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num">04</div>
+            <div class="step-text">
+              <h3>Prove any data element, anywhere</h3>
+              <p>Hash a single element and anchor it on any blockchain. A recipient can verify that specific data artifact without seeing the rest of the document.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="code-window">
+        <div class="code-titlebar">
+          <div class="dot dot-r"></div>
+          <div class="dot dot-y"></div>
+          <div class="dot dot-g"></div>
+          <span class="code-filename">acme-lease-2025.dgml.xml</span>
+        </div>
+        <pre><span class="c-tag">&lt;dg:chunk</span>
+  <span class="c-attr">xmlns:dg</span>=<span class="c-val">"http://dgml.io/ns/dg#"</span>
+  <span class="c-attr">xmlns:docset</span>=<span class="c-val">"http://www.dgml.io/acme/leases#"</span>
+  <span class="c-attr">xmlns:xsi</span>=<span class="c-val">"http://www.w3.org/2001/XMLSchema-instance"</span><span class="c-tag">&gt;</span>
+
+<span class="c-tag">&lt;docset:RentClause&gt;</span>
+
+  <span class="c-text">The Lessee shall pay a monthly rent of </span>
+  <span class="c-tag">&lt;docset:MonthlyRent</span>
+      <span class="c-attr">xsi:type</span>=<span class="c-val">"decimal"</span>
+      <span class="c-attr">dg:value</span>=<span class="c-val">"8500.00"</span>
+      <span class="c-attr">dg:origin</span>=<span class="c-val">"4 740 355 920 375"</span><span class="c-tag">&gt;</span><span class="c-text">$8,500</span><span class="c-tag">&lt;/docset:MonthlyRent&gt;</span>
+  <span class="c-text">, commencing on </span>
+  <span class="c-tag">&lt;docset:CommencementDate</span>
+      <span class="c-attr">xsi:type</span>=<span class="c-val">"date"</span>
+      <span class="c-attr">dg:value</span>=<span class="c-val">"2025-02-01"</span>
+      <span class="c-attr">dg:origin</span>=<span class="c-val">"4 1010 355 1310 375"</span><span class="c-tag">&gt;</span>
+      <span class="c-text">February 1, 2025</span>
+  <span class="c-tag">&lt;/docset:CommencementDate&gt;</span>
+  <span class="c-text">, subject to review per </span>
+  <span class="c-tag">&lt;dg:chunk</span>
+      <span class="c-attr">dg:itemprop</span>=<span class="c-val">"governedBy"</span>
+      <span class="c-attr">dg:href</span>=<span class="c-val">"#rent-review-clause"</span>
+      <span class="c-attr">dg:origin</span>=<span class="c-val">"4 1560 355 1740 375"</span><span class="c-tag">&gt;</span>
+      <span class="c-text">section 9</span>
+  <span class="c-tag">&lt;/dg:chunk&gt;</span><span class="c-text">.</span>
+
+<span class="c-tag">&lt;/docset:RentClause&gt;</span>
+
+<span class="c-tag">&lt;/dg:chunk&gt;</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- COMPLETE SEMANTIC -->
+<section id="complete">
+  <div class="container">
+    <div style="max-width:760px; margin: 0 auto; text-align:center;">
+      <p class="section-label">A Different Philosophy</p>
+      <h2 class="section-title">Traditional extraction answers the questions you thought to ask.<br>DGML answers the ones you didn&rsquo;t.</h2>
+      <p class="section-body" style="max-width:680px; margin: 1.5rem auto 0;">
+        Every extraction pipeline makes an irreversible decision upfront: choose the fields, discard everything else. That works when the questions are known in advance. It fails the moment a new use case appears — a regulatory change, a derivative product, a counterparty due diligence request — that requires information no one thought to capture.
+      </p>
+      <p class="section-body" style="max-width:680px; margin: 1rem auto 0;">
+        DGML preserves the complete semantic structure of the document. Every element, every relationship, every typed value — nothing discarded. A document processed once remains fully queryable as new use cases emerge — a regulatory change, a derivative product, a counterparty due diligence request — without going back to the source. This is not a feature of the tooling. It is a property of the format.
+      </p>
+    </div>
+
+    <div class="layers-grid" style="margin-top:3rem; grid-template-columns: repeat(2, 1fr); max-width: 760px; margin-left: auto; margin-right: auto;">
+      <div class="layer-card" style="border-color: rgba(62,207,110,0.3); background: rgba(62,207,110,0.04);">
+        <div class="layer-num">Then</div>
+        <h3 style="color:var(--text-muted)">Field Extraction</h3>
+        <p style="color:var(--text-muted)">Decide upfront which fields matter. Pull them. Discard the rest. When a new question arrives — a new regulation, a new product, a new counterparty — go back to the source. If the source is gone, the answer is gone.</p>
+      </div>
+      <div class="layer-card lc-blue">
+        <div class="layer-num">Now</div>
+        <h3>Complete Semantic Preservation</h3>
+        <p>The entire document semantic is in the DGML file. Every element tagged, every relationship encoded, every value typed. Query it today for what you know. Query it tomorrow for what you don't yet.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- USE CASES -->
+<section id="usecases">
+  <div class="container">
+    <div class="usecases-header">
+      <p class="section-label">Use Cases</p>
+      <h2 class="section-title">Where verifiable structure changes the outcome.</h2>
+      <p class="section-body">
+        Every scenario involves at least two parties: one who needs to assert a value, and one who needs to verify it independently. In every case, the value of DGML compounds over time — because the complete document semantic is preserved, new questions can be answered from the same file without returning to the source.
+      </p>
+    </div>
+
+    <div class="usecases-grid">
+      <div class="usecase-card">
+        <span class="usecase-icon">🏢</span>
+        <h3>Non-Traded Real Estate Funds</h3>
+        <p>Marguerite Halloran, <strong>CFO of a non-traded real estate fund</strong>, must publish a monthly net asset value (NAV) — the per-share value of everything the fund owns — that investors rely on to subscribe or redeem. Her <strong>valuation advisor</strong>, Theo Ellison, won&rsquo;t stand behind the number unless he can trace each property&rsquo;s value back to the underlying signed leases — which today sit in scattered systems he cannot independently verify.</p>
+        <hr class="usecase-divider">
+        <p>DGML encodes each lease as a structured document: base rent, escalation schedule, free-rent concessions, operating-expense recoveries, renewal options, co-tenancy clauses — every data element typed, traced to the source page, and anchorable on-chain. Theo follows the trail from NAV to clause without a phone call.</p>
+      </div>
+
+      <div class="usecase-card">
+        <span class="usecase-icon">📈</span>
+        <h3>Commercial Mortgage Lenders</h3>
+        <p>Russell Carrow, <strong>CFO of a publicly traded commercial mortgage lender</strong>, needs investors to believe the buildings backing his loans are still worth enough to cover them. <strong>Analyst</strong> Naomi Brandt has openly questioned whether the company is marking its troubled office loans honestly — and she wants independently verifiable evidence, not management assurances.</p>
+        <hr class="usecase-divider">
+        <p>DGML encodes each loan as a structured document: principal, covenants, reported performance, tenant concentration, reserve balances, default triggers — every data element typed, traced to the source page, and anchorable on-chain. Russell produces a loan-by-loan trail Naomi can check herself.</p>
+      </div>
+
+      <div class="usecase-card">
+        <span class="usecase-icon">📋</span>
+        <h3>Private Credit Funds</h3>
+        <p>Daniel Roth, <strong>Head of Private Wealth Solutions at a private credit manager</strong>, wants to make his fund&rsquo;s net asset value (NAV) verifiable enough to offer a liquid, eventually tokenized interest. Evelyn Castellano, <strong>Chair of a public pension plan&rsquo;s investment committee</strong>, will not commit capital to a fund whose NAV she cannot independently verify down to individual loans.</p>
+        <hr class="usecase-divider">
+        <p>DGML encodes each loan as a structured document: principal, interest terms, maintenance covenants, fair-value assumptions, collateral — every data element typed, traced to the source page, and anchorable on-chain. Evelyn traces the fund&rsquo;s NAV down to one borrower&rsquo;s covenant breach or a single recovery assumption.</p>
+      </div>
+
+      <div class="usecase-card">
+        <span class="usecase-icon">🏗️</span>
+        <h3>Infrastructure Funds</h3>
+        <p>Margit Dahl, <strong>CFO of an infrastructure fund</strong>, wants to give institutional investors a way to value, transfer, or borrow against positions in toll roads, regulated utilities, and renewable-energy assets. Conrad Boyle, <strong>Head of Real Assets at a public pension plan</strong>, will not increase, transfer, or finance his stake without independently verified operating performance across decades-long horizons.</p>
+        <hr class="usecase-divider">
+        <p>DGML encodes each concession agreement and operating report as a structured document: tariff mechanisms, performance obligations, debt-service covenants, capital expenditure commitments, ESG metrics — every data element typed, traced to the source page, and anchorable on-chain. Conrad traces a valuation down to a single toll road&rsquo;s traffic figures.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- OPEN INITIATIVE -->
+<section id="open-initiative">
+  <div class="container">
+    <div class="initiative-inner">
+      <p class="section-label">Open Standard</p>
+      <h2 class="section-title">The standard is being written now.</h2>
+      <p class="section-body">
+        DGML is an open initiative founded by Docugami and Inveniam, Apache 2.0 licensed, with a simple premise: the document format for the agentic era should be owned by no one and shaped by everyone who builds on it. The specification is live. The community is forming. A formal steering committee, open to all significant contributors and adopters, will be established to guide the evolution of the format. Organizations that participate now have real influence over what it becomes.
+      </p>
+
+      <div class="layers-grid" style="text-align:left; margin-bottom: 2.5rem; grid-template-columns: repeat(2, 1fr); max-width: 760px; margin-left: auto; margin-right: auto;">
+        <div class="layer-card lc-blue" style="grid-column: span 1;">
+          <div class="layer-num">Build</div>
+          <h3>Reference Implementation</h3>
+          <p>An early Python toolkit is on GitHub. Use it, break it, improve it. The implementations that emerge from real use cases are what harden a standard — and the people who build them are the ones who shape its direction.</p>
+        </div>
+        <div class="layer-card lc-purple" style="grid-column: span 1;">
+          <div class="layer-num">Shape</div>
+          <h3>Specification</h3>
+          <p>The spec is versioned in the repo. Open an issue to propose a new subject, challenge a design decision, or bring a use case the founding organizations haven&rsquo;t encountered. What gets raised now gets considered now.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section id="cta">
+  <div class="container">
+    <div class="cta-inner">
+      <p class="section-label" style="font-size:0.9rem;">DGML</p>
+      <h2 class="section-title">the domain-native<br>document format.</h2>
+      <p class="section-body">Your AI shouldn&rsquo;t have to guess what it&rsquo;s reading.</p>
+
+      <div class="hero-actions" style="justify-content:center; margin-top: 2.5rem;">
+        <a href="https://github.com/docugami/dgml" class="btn-primary">Read the spec &rarr;</a>
+        <a href="https://github.com/docugami/dgml" class="btn-ghost">Reference Implementation</a>
+        <a href="https://github.com/docugami/dgml/discussions" class="btn-primary">Participate</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div class="site-logo">&lt;/&gt;&thinsp;DGML</div>
+    <div class="footer-links">
+      <span>Apache 2.0 Licensed</span>
+      <span class="footer-sep">&middot;</span>
+      <span>Open Standard</span>
+      <span class="footer-sep">&middot;</span>
+      <a href="https://github.com/docugami/dgml">github.com/docugami/dgml</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
