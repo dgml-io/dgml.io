@@ -495,9 +495,10 @@ async function getBlobUrl(fileHandle) {
 // ═══════════════════════════════════════════════════════════════════
 // STATIC SAMPLE BUNDLE — reads real workspace files over fetch(), no
 // backend, no precomputed content. samples/file-list.json is the ONLY
-// precomputed artifact (see scripts/gen_samples_file_list.py in the dgml
-// repo): a flat list of real paths, standing in for the directory listing
-// a static host can't serve. Docset names, file names/page counts, and
+// precomputed artifact (see scripts/gen_samples_file_list.py in the
+// dgml-spec repo, which publishes samples/): a flat list of real paths,
+// standing in for the directory listing a static host can't serve. It is
+// committed alongside samples/ in dgml-spec. Docset names, file names/page counts, and
 // each file's real *.dgml.xml name are all read from the same real
 // docset.json / file.json / *.dgml.xml files a FileSystemDirectoryHandle
 // would have read — just fetched instead of walked.
@@ -507,11 +508,11 @@ async function getBlobUrl(fileHandle) {
 // works standalone with zero copying too.
 //
 // "Local" is checked at two possible relative locations, since this same
-// file is deployed two different ways: samples/ sitting in the *same*
+// file can be deployed two different ways: samples/ sitting in the *same*
 // folder as this file (e.g. dgml.io/examples/{dgml-app-sample.html,samples/})
-// vs. samples/ one level *up*, a sibling of the folder this file lives in
-// (e.g. this repo's app-sample/dgml-app-sample.html with samples/ at the
-// repo root). Both are tried before the remote fallback.
+// vs. samples/ one level *up*, a sibling of the folder this file lives in.
+// Both are tried before the remote fallback. In this repo no local samples/
+// is bundled (they live in dgml-spec), so the remote fallback is used.
 // ═══════════════════════════════════════════════════════════════════
 const REMOTE_SAMPLES_BASE = 'https://raw.githubusercontent.com/dgml-io/dgml-spec/main/';
 const LOCAL_SAMPLES_BASE_CANDIDATES = ['', '../'];
