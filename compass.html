@@ -428,7 +428,7 @@
         <h3>1. DGML vs markdown: traceable reasoning</h3>
         <p class="verify-intro">See for yourself whether an agent’s figures point back to the document, question by question.</p>
         <p class="section-body">30 SEC 10-K filings and 233 DocFinQA questions. The same agent answers every question once reading DGML and once reading markdown. With DGML, 82–85% of the figures it reasons from point to one exact place in the document, against 16–33% with markdown, using 6.6–7.0M tokens against 11–14M.</p>
-        <p class="section-body">All results are published: <a href="https://github.com/dgml-io/dgml-compass/blob/main/reasoning/docs/RESULTS.md"><code>dgml-compass/reasoning/docs/RESULTS.md</code></a>. Rescore it offline, with no API key: <code>uv run dgr reproduce</code> (<a href="https://github.com/dgml-io/dgml-compass/blob/main/reasoning/README.md#reproduce">how to reproduce</a>). Reproduce it fully by re-running the model with your own API key.</p>
+        <p class="section-body">All results are published: <a href="https://github.com/dgml-io/dgml-compass/blob/main/reasoning/docs/RESULTS.md">see the full results</a>. Rescore them offline, with no API key, using <code>uv run dgr reproduce</code>, or reproduce them fully by re-running the model with your own API key (<a href="https://github.com/dgml-io/dgml-compass/blob/main/reasoning/README.md#reproduce">how to reproduce</a>).</p>
       </div>
       <div class="card purple">
         <h3>2. Model Compass: picking the models for your pipeline</h3>
@@ -445,7 +445,7 @@
           </table>
         </div>
         <p class="fine" style="margin-top:0.4rem;">Haiku 5.5 is the most cost-effective transcriber tested so far: it matches Sonnet 5, Opus 5 and GPT-5.5 (78.3–78.8) at 1/9 to 1/20 of their cost, so spend on the labeler. F1 is field values against gold, mean of 9 docsets. Up to 30× is on commercial leases: Haiku 5.5 in both roles scores 93.4 F1 at $0.045 per document, against 94.3 at $1.33 for the best-scoring pipeline.</p>
-        <p class="section-body" style="margin-top:0.8rem;">All results are published: <a href="https://github.com/dgml-io/dgml-compass/blob/main/models/docs/RESULTS.md"><code>dgml-compass/models/docs/RESULTS.md</code></a>. To re-run every sweep yourself, use <code>uv run dgc sweep --yes</code> with your own API keys and dgml (<a href="https://github.com/dgml-io/dgml-compass/blob/main/models/README.md#quickstart-start-small">how to run</a>).</p>
+        <p class="section-body" style="margin-top:0.8rem;">All results are published: <a href="https://github.com/dgml-io/dgml-compass/blob/main/models/docs/RESULTS.md">see the full results</a>. Re-run every sweep yourself using <code>uv run dgc sweep --yes</code> with your own API keys and dgml (<a href="https://github.com/dgml-io/dgml-compass/blob/main/models/README.md#quickstart-start-small">how to reproduce</a>).</p>
       </div>
     </div>
   </div>
