@@ -730,6 +730,60 @@
     .footer-sep { opacity: 0.4; }
 
     /* ── RESPONSIVE ── */
+    /* ── COMPASS RESULTS ── */
+    #compass { text-align: left; }
+    #compass .compass-head { text-align: center; margin-bottom: 3rem; }
+    #compass .compass-title {
+      font-size: clamp(2.2rem, 5vw, 3.4rem);
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      line-height: 1.05;
+      margin-bottom: 1rem;
+      background: linear-gradient(160deg, #0a1f14 40%, #16a34a 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    #compass .compass-sub {
+      font-size: clamp(1.05rem, 2.2vw, 1.3rem);
+      color: var(--text-muted);
+      max-width: 760px;
+      margin: 0 auto;
+    }
+    .section-label.purple { color: var(--purple); }
+    .results { display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; }
+    .results > * { min-width: 0; }
+    .tiles { display: grid; gap: 1.5rem; }
+    .tiles.two { grid-template-columns: 1fr 1fr; }
+    .tile {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.8rem;
+      height: 100%;
+    }
+    .tile.purple { background: rgba(124,58,237,0.04); border-color: rgba(124,58,237,0.2); }
+    .tile-big {
+      font-size: 2.8rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1;
+      color: var(--accent);
+      margin-bottom: 0.5rem;
+    }
+    .tile.purple .tile-big { color: var(--purple); }
+    .tile-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.6rem; }
+    .tile-desc { font-size: 0.95rem; color: var(--text-muted); font-style: italic; margin-bottom: 0.8rem; }
+    .tile-num { font-size: 0.95rem; font-weight: 600; }
+    .fine { font-size: 0.8rem; color: var(--text-muted); opacity: 0.8; margin-top: 1.2rem; line-height: 1.6; }
+    .fine a { color: var(--accent); }
+    #compass .fine { text-align: center; }
+    @media (max-width: 860px) { .results { grid-template-columns: 1fr; } }
+    @media (max-width: 768px) {
+      .tiles.two { grid-template-columns: 1fr; }
+      .tile { padding: 1.4rem; }
+    }
+
     @media (max-width: 768px) {
       nav { padding: 0 1.2rem; }
       .nav-links { display: none; }
@@ -985,6 +1039,47 @@
 <span class="c-tag">&lt;/dg:chunk&gt;</span>
       </div>
     </div>
+  </div>
+</section>
+
+<!-- COMPASS RESULTS -->
+<section id="compass">
+  <div class="container">
+    <div class="compass-head">
+      <h2 class="compass-title">DGML Compass</h2>
+      <p class="compass-sub">2.5× the traceable reasoning of markdown at half the tokens. And Compass picks models that create DGML up to 30× cheaper than the best-scoring.</p>
+    </div>
+    <div class="results">
+      <div>
+        <p class="section-label">DGML vs markdown</p>
+        <div class="tiles two">
+          <div class="tile">
+            <div class="tile-big">2.5×</div>
+            <div class="tile-title">traceable reasoning</div>
+            <p class="tile-desc">Figures the model reasons from that point to one exact place in the document.</p>
+            <p class="tile-num">82–85% with DGML against 16–33% with markdown.</p>
+          </div>
+          <div class="tile">
+            <div class="tile-big">½</div>
+            <div class="tile-title">the tokens</div>
+            <p class="tile-desc">What the model used to answer the same questions.</p>
+            <p class="tile-num">6.6–7.0M tokens with DGML against 11–14M with markdown.</p>
+          </div>
+        </div>
+      </div>
+      <div>
+        <p class="section-label purple">Creating DGML: cheapest vs best models</p>
+        <div class="tiles">
+          <div class="tile purple">
+            <div class="tile-big">Up to 30×</div>
+            <div class="tile-title">cheaper to create DGML</div>
+            <p class="tile-desc">Model Compass finds the optimal models that turn your documents into DGML.</p>
+            <p class="tile-num">93.4 F1 at $0.045 per document, against 94.3 F1 at $1.33.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="fine">Traceable means each figure an answer is computed from leads to exactly one place in the document. The 30× gain comes from Model Compass choosing the models dgml runs on. <a href="compass.html#verify">How both benchmarks were run →</a></p>
   </div>
 </section>
 
