@@ -451,9 +451,9 @@ const RIGHT_COL_MAX = 640;
 // tag metrics cache for current file
 let _metrics = [];
 let _descDebounce = null;
-// computed-field index for current file: nodeId -> { hrefIds, hrefTargets, hrefTags }
-// (dg:origin="computed" elements — derived values with no page box of their own;
-// hrefTargets/hrefTags resolve their dg:href to the real grounded fields they came from)
+// provenance index for current file: nodeId -> { hrefIds, hrefTargets, hrefTags, method, printed }
+// (elements with dg:inputs or dg:method — values the page prints only in part, or
+// not at all; hrefTargets/hrefTags resolve their dg:inputs to the elements they used)
 let _computedMap = new Map();
 
 function resetFileState() {
@@ -773,19 +773,35 @@ function jumpToPage(page) {
   if (page && page !== S.currentPage) { S.currentPage = page; showPage(); }
 }
 
-// A dg:href value is a "; "-separated (React port also tolerates bare
-// whitespace) list of "#xml:id" references — same separator convention as
-// dg:origin's own multi-box lists.
+// A dg:inputs (or dg:href) value is a "; "-separated (whitespace is tolerated
+// too) list of "#xml:id" references — same separator convention as dg:origin's
+// own multi-box lists. A "fileid#xml:id" reference names another file and
+// can't resolve here, so it is skipped.
 function parseHrefIds(href) {
-  return (href || '').split(/[;\s]+/).map(s => s.trim().replace(/^#/, '')).filter(Boolean);
+  return (href || '').split(/[;\s]+/).map(s => s.trim()).filter(s => s.startsWith('#') && s.length > 1).map(s => s.slice(1));
 }
 
-// dg:origin="computed" marks a derived value (e.g. a computed total) that was
-// never read off the page — there is no box to draw for it. Its provenance is
-// carried by dg:href, which names the xml:id of each field it was computed
-// from. This walks the doc once to build xml:id -> nodeId (the same 'r/i0/i1'
-// scheme buildOverlaysByPage/buildTreeNodes use) so those references resolve
-// to real, groundable nodes.
+// DGML 0.71 provenance: dg:origin holds only the boxes of an element's own
+// printed text; dg:inputs names the xml:id of each element its value used; and
+// dg:method says how a value the page doesn't print was produced (calculated,
+// inferred, defaulted). A value printed in part ("3/1" + the commencement year)
+// has boxes AND inputs. DGML 0.7 wrote dg:origin="computed" + dg:href instead;
+// that still reads, as inputs with method "inferred". This walks the doc once to
+// build xml:id -> nodeId (the same 'r/i0/i1' scheme buildOverlaysByPage/
+// buildTreeNodes use) so those references resolve to real, groundable nodes.
+const PROVENANCE_METHODS = ['calculated', 'inferred', 'defaulted'];
+function readProvenance(el) {
+  const origin = (el.getAttributeNS(DG_NS, 'origin') ?? el.getAttribute('dg:origin') ?? '').trim();
+  const legacy = origin === 'computed';
+  let inputs = (el.getAttributeNS(DG_NS, 'inputs') ?? el.getAttribute('dg:inputs') ?? '').trim();
+  if (!inputs && legacy) inputs = (el.getAttributeNS(DG_NS, 'href') ?? el.getAttribute('dg:href') ?? '').trim();
+  const printed = !!origin && !legacy;
+  const stated = (el.getAttributeNS(DG_NS, 'method') ?? el.getAttribute('dg:method') ?? '').trim();
+  let method = null;
+  if (!printed) method = PROVENANCE_METHODS.includes(stated) ? stated : (inputs ? 'inferred' : null);
+  return { printed, inputs, method };
+}
+
 function buildComputedIndex(xmlStr) {
   const doc = new DOMParser().parseFromString(xmlStr, 'application/xml');
   if (doc.querySelector('parsererror')) return new Map();
@@ -796,19 +812,16 @@ function buildComputedIndex(xmlStr) {
     const xmlId = el.getAttribute('xml:id');
     if (xmlId) idToNodeId.set(xmlId, nodeId);
     nodeIdToTag.set(nodeId, el.tagName);
-    const origin = (el.getAttributeNS(DG_NS, 'origin') ?? el.getAttribute('dg:origin') ?? '').trim();
-    if (origin === 'computed') {
-      const href = el.getAttributeNS(DG_NS, 'href') ?? el.getAttribute('dg:href') ?? '';
-      computedEntries.push({ nodeId, hrefIds: parseHrefIds(href) });
-    }
+    const { printed, inputs, method } = readProvenance(el);
+    if (inputs || method) computedEntries.push({ nodeId, hrefIds: parseHrefIds(inputs), method, printed });
     for (let i = 0; i < el.children.length; i++) walk(el.children[i], `${nodeId}/${i}`);
   }
   walk(doc.documentElement, 'r');
   const map = new Map();
-  for (const { nodeId, hrefIds } of computedEntries) {
+  for (const { nodeId, hrefIds, method, printed } of computedEntries) {
     const hrefTargets = hrefIds.map(id => idToNodeId.get(id)).filter(Boolean);
     const hrefTags = hrefTargets.map(nid => stripNs(nodeIdToTag.get(nid) || '')).filter(Boolean);
-    map.set(nodeId, { hrefIds, hrefTargets, hrefTags });
+    map.set(nodeId, { hrefIds, hrefTargets, hrefTags, method, printed });
   }
   return map;
 }
@@ -818,6 +831,22 @@ function buildComputedIndex(xmlStr) {
 // viewBox="0 0 100 100" + rects at percent coords + CSS inset:0 fill parent.
 // Zero dependency on image pixel dimensions — always correct regardless of timing.
 // ═══════════════════════════════════════════════════════════════════
+// A pinned node selection lights up that node AND its whole subtree — selecting
+// a parent (e.g. a LineItem) highlights its children (Type, Amount, …) too.
+// Node ids are hierarchical paths ("r/0/1"), so a descendant is any id that
+// starts with "<selNodeId>/".
+function nodeIsInSelection(nid) {
+  const sel = S.selNodeId;
+  return !!sel && (nid === sel || nid.startsWith(sel + '/'));
+}
+
+// Same subtree rule for hover: hovering a parent node lights up its whole
+// subtree (the node plus its descendants), mirroring nodeIsInSelection.
+function nodeIsInHover(nid) {
+  const hov = S.hovNodeId;
+  return !!hov && (nid === hov || nid.startsWith(hov + '/'));
+}
+
 function renderOverlay() {
   const svg = document.getElementById('pg-svg');
   if (!svg) return;
@@ -833,8 +862,8 @@ function renderOverlay() {
   const imgW = pgImg?.naturalWidth || 0;
   const imgH = pgImg?.naturalHeight || 0;
 
-  // If the current selection is a computed field, its own value has no box —
-  // highlight the real, grounded fields it was derived from instead.
+  // If the current selection names inputs, highlight the elements it used too
+  // (for an unprinted value they are the only boxes it has).
   const computedInfo = selNodeId ? _computedMap.get(selNodeId) : null;
   const sourceNodeIds = computedInfo ? new Set(computedInfo.hrefTargets) : null;
 
@@ -843,9 +872,10 @@ function renderOverlay() {
     const x = r.x * 100 / imgW, y = r.y * 100 / imgH;
     const w = r.w * 100 / imgW, h = r.h * 100 / imgH;
     const tag = stripNs(r.tag);
-    // Exact React OR logic: selected = nodeId match OR tag match
-    const isSel = (!!selNodeId && r.nodeId === selNodeId) || (!!selTag && tag === selTag);
-    const isHov = !isSel && ((!!hovNodeId && r.nodeId === hovNodeId) || (!!hovTag && tag === hovTag));
+    // A pinned node selection (tree/box click) identifies ONE instance and wins;
+    // a bare tag selection (chip) highlights every instance. Same rule for hover.
+    const isSel = selNodeId ? nodeIsInSelection(r.nodeId) : (!!selTag && tag === selTag);
+    const isHov = !isSel && (hovNodeId ? nodeIsInHover(r.nodeId) : (!!hovTag && tag === hovTag));
     const isSource = !isSel && !isHov && !!sourceNodeIds && sourceNodeIds.has(r.nodeId);
     const isBasket = !isSel && !isHov && !isSource && basket.includes(tag);
 
@@ -873,7 +903,9 @@ function renderOverlay() {
     rect.addEventListener('pointerenter', () => { S.hovNodeId = nid; S.hovTag = tag; refreshTagChips(); renderTreePanel(); renderAnchorStrip(); updateOverlayStyles(); });
     rect.addEventListener('pointerleave', () => { S.hovNodeId = null; S.hovTag = null; refreshTagChips(); renderTreePanel(); renderAnchorStrip(); updateOverlayStyles(); });
     rect.addEventListener('click', () => {
-      // toggle selNodeId; always set selTag (matches React: toggleSelectedDgmlNodeId + setSelectedTagName)
+      // Clicking a box pins that one instance (selNodeId, which wins in the
+      // isSel rule → only this box highlights). selTag is kept only so the
+      // chip/basket know the tag; it no longer drives page highlighting.
       S.selNodeId = S.selNodeId === nid ? null : nid;
       S.selTag = tag;
       if (S.selNodeId) expandAncestorsOf(S.selNodeId);
@@ -893,8 +925,8 @@ function updateOverlayStyles() {
   svg.querySelectorAll('rect[data-tag]').forEach(rect => {
     const tag = rect.dataset.tag;
     const nid = rect.dataset.nid;
-    const isSel = (!!selNodeId && nid === selNodeId) || (!!selTag && tag === selTag);
-    const isHov = !isSel && ((!!hovNodeId && nid === hovNodeId) || (!!hovTag && tag === hovTag));
+    const isSel = selNodeId ? nodeIsInSelection(nid) : (!!selTag && tag === selTag);
+    const isHov = !isSel && (hovNodeId ? nodeIsInHover(nid) : (!!hovTag && tag === hovTag));
     const isSource = !isSel && !isHov && !!sourceNodeIds && sourceNodeIds.has(nid);
     const isBasket = !isSel && !isHov && !isSource && basket.includes(tag);
     let fill, stroke, sw;
@@ -2019,7 +2051,11 @@ function refreshTagChips() {
     chip.addEventListener('mouseenter', () => { S.hovTag = tag; updateChipStyles(); renderAnchorStrip(); updateOverlayStyles(); });
     chip.addEventListener('mouseleave', () => { S.hovTag = null; updateChipStyles(); renderAnchorStrip(); updateOverlayStyles(); });
     chip.addEventListener('click', () => {
-      S.selTag = S.selTag === tag ? null : tag;  // toggle selTag only, never touch selNodeId
+      // Selecting a tag is a tag-level action → highlight every instance. Clear
+      // any pinned single-instance selection so node-id precedence (in the
+      // overlay/tree isSel rule) doesn't shadow the all-instances highlight.
+      S.selTag = S.selTag === tag ? null : tag;
+      S.selNodeId = null;
       refreshTagChips(); renderTreePanel(); renderAnchorStrip(); renderOverlay();
     });
   });
@@ -2043,16 +2079,18 @@ function buildTreeNodes(el, id) {
   for (let i = 0; i < el.children.length; i++) children.push(buildTreeNodes(el.children[i], `${id}/${i}`));
   const text = (el.textContent || '').replace(/\s+/g, ' ').trim();
   const preview = text.length > PREVIEW_MAX ? text.slice(0, PREVIEW_MAX - 1) + '…' : text;
-  const originAttr = (el.getAttributeNS(DG_NS, 'origin') ?? el.getAttribute('dg:origin') ?? '').trim();
-  // dg:origin="computed" is a marker string, not a box — it has no page location
-  // of its own (see buildComputedIndex).
-  const isComputed = originAttr === 'computed';
-  const hasBoxes = !!originAttr && !isComputed;
+  // A value with no boxes but a dg:method/dg:inputs is unprinted: it has no page
+  // location of its own (see buildComputedIndex). A 0.7 dg:origin="computed" is
+  // a marker string, not a box.
+  const { printed, inputs, method } = readProvenance(el);
+  const isComputed = !printed && !!method;
+  const hasBoxes = printed;
+  const hasInputs = !!inputs;
   // The one <dg:extraction> element (schema-driven field values, sibling of
   // the generated document tree) — marked so it doesn't blend into the rest
   // of the tree at a glance.
   const isExtraction = el.tagName === 'dg:extraction';
-  return { id, tag: el.tagName, preview, hasBoxes, isComputed, isExtraction, children };
+  return { id, tag: el.tagName, preview, hasBoxes, isComputed, hasInputs, isExtraction, children };
 }
 
 function defaultTreeExpanded(node, depth) {
@@ -2108,7 +2146,10 @@ function renderTreePanel() {
       refreshTagChips(); renderAnchorStrip(); renderOverlay();
     });
     btn.addEventListener('click', () => {
-      // Always set selTag (React: always dispatch setSelectedTagName)
+      // Set selTag so the tag chip + anchor "basket" know which tag this
+      // instance belongs to — but page/tree highlighting is driven by
+      // selNodeId (set below), which takes precedence in the isSel rule, so a
+      // tree click highlights only THIS instance, not every one of the tag.
       S.selTag = tag;
       // Toggle selNodeId regardless of hasBoxes — a tree click always
       // identifies one concrete node (buildTreeNodes gives every node an
@@ -2127,9 +2168,9 @@ function renderTreePanel() {
           jumpToPage(nearestPageForNodeId(nid));
         }
       } else if (isComputed && S.selNodeId === nid) {
-        // A computed value has no box of its own to jump to — jump to
-        // wherever its first source field lives instead; renderOverlay()
-        // highlights all of its sources once selNodeId is set.
+        // An unprinted value has no box of its own to jump to — jump to
+        // wherever its first input lives instead; renderOverlay()
+        // highlights all of its inputs once selNodeId is set.
         const info = _computedMap.get(nid);
         const firstTarget = info?.hrefTargets[0];
         if (firstTarget) jumpToPage(nearestPageForNodeId(firstTarget));
@@ -2143,14 +2184,16 @@ function renderTreeNode(node, depth) {
   const tag = stripNs(node.tag);
   const hasKids = node.children.length > 0;
   const expanded = treeExpanded.has(node.id);
-  const isSel = (!!S.selNodeId && node.id === S.selNodeId) || (!!S.selTag && tag === S.selTag);
-  const isHov = !isSel && ((!!S.hovNodeId && node.id === S.hovNodeId) || (!!S.hovTag && tag === S.hovTag));
+  // Node-id selection pins one instance and wins; a bare tag selection (chip)
+  // lights up every instance's row. Mirrors the page overlay's rule.
+  const isSel = S.selNodeId ? nodeIsInSelection(node.id) : (!!S.selTag && tag === S.selTag);
+  const isHov = !isSel && (S.hovNodeId ? nodeIsInHover(node.id) : (!!S.hovTag && tag === S.hovTag));
   const indent = depth * 12;
   let btnCls = 'tree-node-btn';
   if (isSel) btnCls += ' tag-sel';
   else if (isHov) btnCls += ' tag-hov';
-  // Computed nodes have no box of their own but ARE clickable (they jump to
-  // their source fields instead) — only true boxless/unrooted nodes get the
+  // Unprinted nodes have no box of their own but ARE clickable (they jump to
+  // their inputs instead) — only true boxless/unrooted nodes get the
   // "not actionable" cursor.
   if (!node.hasBoxes && !node.isComputed) btnCls += ' no-boxes';
   if (node.isComputed) btnCls += ' computed';
@@ -2160,10 +2203,15 @@ function renderTreeNode(node, depth) {
     : `<span class="tree-toggle invisible">▸</span>`;
   h += `<button class="${btnCls}" data-tree-tag="${esc(tag)}" data-tree-id="${esc(node.id)}" data-has-boxes="${node.hasBoxes ? '1' : ''}" data-computed="${node.isComputed ? '1' : ''}">`;
   h += `<span class="tree-tag">${esc(tag)}</span>`;
-  if (node.isComputed) {
+  if (node.isComputed || node.hasInputs) {
     const info = _computedMap.get(node.id);
-    const title = info && info.hrefTags.length ? `Computed from: ${info.hrefTags.join(', ')}` : 'Computed value — source fields not resolved';
-    h += `<span class="computed-badge" title="${esc(title)}">Σ computed</span>`;
+    const method = info?.method;
+    const label = method ? { calculated: 'Σ calculated', inferred: '≈ inferred', defaulted: '∅ defaulted' }[method] : '◐ printed in part';
+    const from = info && info.hrefTags.length ? info.hrefTags.join(', ') : '';
+    const title = method === 'defaulted' ? 'Producer default — no inputs'
+      : from ? `${method ? 'From' : 'Completed from'}: ${from}`
+      : 'Inputs not resolved in this file';
+    h += `<span class="computed-badge" title="${esc(title)}">${label}</span>`;
   }
   if (node.isExtraction) h += `<span class="extraction-badge" title="Schema-driven extracted field values">extraction</span>`;
   if (node.preview) h += `<span class="tree-preview">${esc(node.preview)}</span>`;
