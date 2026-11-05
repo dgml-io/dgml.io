@@ -96,7 +96,11 @@
       text-decoration: none;
       font-size: 0.875rem;
       font-weight: 500;
+      white-space: nowrap;
       transition: color 0.2s;
+    }
+    @media (max-width: 900px) {
+      .nav-links { gap: 1.25rem; }
     }
     .nav-links a:hover { color: var(--text); }
 
@@ -818,7 +822,7 @@
       <li><a href="#layers">Layers</a></li>
       <li><a href="#how">How It Works</a></li>
       <li><a href="#usecases">Use Cases</a></li>
-      <li><a href="compass.html">Compass</a></li>
+      <li><a href="compass.html">DGML Compass</a></li>
       <li><a href="https://github.com/dgml-io" class="nav-cta">GitHub →</a></li>
     </ul>
   </div>
